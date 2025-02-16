@@ -53,3 +53,14 @@ __Wanna be a sponsor__? It would be my great honor. please visit my [sponsor](ht
 Resources of this repository are distributed under Apache version 2.0 license.
 See [LICENSE](./LICENSE).
 
+## BibTeX
+
+```bibtex
+@misc{stackchan,
+  author       = {Shinya Ishikawa and the Stack-chan community},
+  title        = {Stack-chan: A JavaScript-driven Super-kawaii Robot},
+  year         = {2021},
+  howpublished = {\url{https://github.com/stack-chan/stack-chan}},
+  note         = {Open-source hardware and software.},
+}
+```
