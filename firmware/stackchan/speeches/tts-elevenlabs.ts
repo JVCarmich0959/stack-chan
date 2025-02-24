@@ -48,7 +48,7 @@ export class TTS {
     this.voice_settings = props.voice_settings
     this.volume = props.volume ?? 0.5
   }
-  async stream(text: string, volume: number): Promise<void> {
+  async stream(text: string, volume?: number): Promise<void> {
     if (this.streaming) {
       throw new Error('already playing')
     }
