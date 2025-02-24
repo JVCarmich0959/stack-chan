@@ -265,6 +265,9 @@ export class Robot {
    * @returns return when the playback of the tone is completed.
    */
   async tone(hz: number, duration: number, volume?: number): Promise<void> {
+    if (volume !== undefined && (volume < 0 || volume > 1)) {
+      throw new Error('Volume must be between 0 and 1')
+    }
     return this.#tone?.tone(hz, duration, volume)
   }
 
