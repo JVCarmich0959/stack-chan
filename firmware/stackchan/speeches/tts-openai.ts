@@ -12,6 +12,7 @@ export type TTSProperty = {
   model?: string
   voice?: string
   speed?: number
+  instructions?: string
 }
 
 export class TTS {
@@ -22,6 +23,7 @@ export class TTS {
   model: string
   voice: string
   speed: number
+  instructions: string
   streaming: boolean
   constructor(props: TTSProperty) {
     this.onPlayed = props.onPlayed
@@ -31,6 +33,7 @@ export class TTS {
     this.model = props.model ?? 'tts-1'
     this.voice = props.voice ?? 'alloy'
     this.speed = props.speed ?? 1
+    this.instructions = props.instructions ?? ''
   }
   async stream(text: string): Promise<void> {
     if (this.streaming) {
@@ -47,6 +50,7 @@ export class TTS {
         model: this.model,
         voice: this.voice,
         speed: this.speed,
+        instructions: this.instructions,
         response_format: 'wav',
         audio: {
           out: audio,

@@ -7,6 +7,7 @@ declare module "openaistreamer" {
         voice: string,
         response_format?: string,
         speed?: number
+        instructions?: string
         audio: {
             out: AudioOut,
             sampleRate?: number,
