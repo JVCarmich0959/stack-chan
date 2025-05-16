@@ -5,11 +5,11 @@
     "forceConsistentCasingInFileNames": true,
     "module": "es2022",
     "lib": [
-      "es2022"
+      "es2024"
     ],
     "outDir": "dist",
     "sourceMap": true,
-    "target": "ES2022",
+    "target": "ES2024",
     "paths": {
       "*": [
         "./node_modules/@moddable/typings/*",
