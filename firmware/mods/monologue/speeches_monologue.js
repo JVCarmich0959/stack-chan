@@ -29,6 +29,16 @@ export const speeches = Object.freeze({
   sentense28: '部屋から立ち上がってお仕事しようね。',
   sentense29: 'エムゴスタック…エムファイブスタック…。',
   sentense30: 'モーターぎゅんぎゅん。',
+  sentense31: '風が気持ちいいね。',
+  sentense32: '今日はお出かけ日和かな？',
+  sentense33: 'ちょっと休憩しよう。',
+  sentense34: '好きな食べ物はなに？',
+  sentense35: 'そろそろ寝てもいい？',
+  sentense36: 'うーん、考え中。',
+  sentense37: '忙しい時ほど深呼吸。',
+  sentense38: '時間が経つの早いね。',
+  sentense39: 'まったりするのも大事。',
+  sentense40: 'いつもありがとう！',
 })
 
 export const SynthProps = Object.freeze({
