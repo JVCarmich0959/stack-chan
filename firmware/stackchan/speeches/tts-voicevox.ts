@@ -1,7 +1,6 @@
 /* eslint-disable prefer-const */
-import AudioOut from 'pins/audioout'
 import WavStreamer from 'wavstreamer'
-import calculatePower from 'calculate-power'
+import { BaseTTS, type BaseTTSProps } from 'tts-base'
 import type HTTPClient from 'embedded:network/http/client'
 import Headers from 'headers'
 import { File } from 'file'
@@ -20,20 +19,14 @@ declare const device: {
   }
 }
 
-export type TTSProperty = {
-  onPlayed?: (number) => void
-  onDone?: () => void
+export type TTSProperty = BaseTTSProps & {
   host: string
   port: number
   sampleRate?: number
   speakerId?: number
-  volume?: number
 }
 
-export class TTS {
-  audio?: AudioOut
-  onPlayed?: (number) => void
-  onDone?: () => void
+export class TTS extends BaseTTS {
   client: HTTPClient
   host: string
   port: number
@@ -41,16 +34,13 @@ export class TTS {
   file: File
   speakerId: number
   sampleRate: number
-  volume: number
   constructor(props: TTSProperty) {
-    this.onPlayed = props.onPlayed
-    this.onDone = props.onDone
+    super(props)
     this.streaming = false
     this.speakerId = props.speakerId ?? 1
     this.host = props.host
     this.port = props.port
     this.sampleRate = props.sampleRate ?? 11025
-    this.volume = props.volume ?? 0.5
   }
   async getQuery(text: string, speakerId = 1): Promise<void> {
     return new Promise((resolve, reject) => {
@@ -111,65 +101,43 @@ export class TTS {
     } catch (error) {
       throw new Error(error)
     }
-    const { onPlayed, onDone } = this
     const file = new File(QUERY_PATH)
     trace(`file opened. length: ${file.length}, position: ${file.position}`)
-    return new Promise((resolve, reject) => {
-      this.audio = new AudioOut({ streams: 1, bitsPerSample: 16, sampleRate: this.sampleRate })
-      this.audio.enqueue(0, AudioOut.Volume, Math.round((volume ?? this.volume) * 256))
-      const audio = this.audio
-      const streamer = new WavStreamer({
-        http: device.network.http,
-        host,
-        port,
-        path: encodeURI(`/synthesis?speaker=${speakerId}`),
-        audio: {
-          out: audio,
-          stream: 0,
-        },
-        bufferDuration: 600,
-        request: {
-          method: 'POST',
-          headers: new Headers([
-            ['content-type', 'application/json'],
-            ['content-length', `${file.length}`],
-          ]),
-          onWritable(count) {
-            this.write(file.read(ArrayBuffer, count))
+    return this.play(
+      (audio, hooks) =>
+        new WavStreamer({
+          http: device.network.http,
+          host,
+          port,
+          path: encodeURI(`/synthesis?speaker=${speakerId}`),
+          audio: {
+            out: audio,
+            stream: 0,
           },
-        },
-        onPlayed(buffer) {
-          const power = calculatePower(buffer)
-          onPlayed?.(power)
-        },
-        onReady(state) {
-          trace(`Ready: ${state}\n`)
-          if (state) {
-            audio.start()
-          } else {
-            audio.stop()
-          }
-        },
-        onError: (e) => {
-          file.close()
-          trace('ERROR: ', e, '\n')
-          this.streaming = false
-          streamer?.close()
-          this.audio?.close()
-          this.audio = undefined
-          reject(e)
-        },
-        onDone: () => {
-          file.close()
-          trace('DONE\n')
-          this.streaming = false
-          streamer?.close()
-          this.audio?.close()
-          this.audio = undefined
-          onDone?.()
-          resolve()
-        },
-      })
-    })
+          bufferDuration: 600,
+          request: {
+            method: 'POST',
+            headers: new Headers([
+              ['content-type', 'application/json'],
+              ['content-length', `${file.length}`],
+            ]),
+            onWritable(count) {
+              this.write(file.read(ArrayBuffer, count))
+            },
+          },
+          onPlayed: hooks.onPlayed,
+          onReady: hooks.onReady,
+          onError: (e) => {
+            file.close()
+            hooks.onError(e)
+          },
+          onDone: () => {
+            file.close()
+            hooks.onDone()
+          },
+        }),
+      volume,
+      { bitsPerSample: 16, sampleRate: this.sampleRate },
+    )
   }
 }
