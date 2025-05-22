@@ -1,7 +1,6 @@
 /* eslint-disable prefer-const */
-import AudioOut from 'pins/audioout'
 import MP3Streamer from 'mp3streamer'
-import calculatePower from 'calculate-power'
+import { BaseTTS, type BaseTTSProps } from 'tts-base'
 import { fetch } from 'fetch'
 import { URL } from 'url'
 import type HTTPClient from 'embedded:network/http/client'
@@ -17,31 +16,22 @@ declare const device: {
   }
 }
 
-export type TTSProperty = {
-  onPlayed?: (number) => void
-  onDone?: () => void
+export type TTSProperty = BaseTTSProps & {
   token: string
   sampleRate?: number
   speakerId?: number
-  volume?: number
 }
 
-export class TTS {
-  audio?: AudioOut
-  onPlayed?: (number) => void
-  onDone?: () => void
+export class TTS extends BaseTTS {
   token: string
   streaming: boolean
   speakerId: number
   sampleRate?: number
-  volume: number
   constructor(props: TTSProperty) {
-    this.onPlayed = props.onPlayed
-    this.onDone = props.onDone
+    super(props)
     this.streaming = false
     this.speakerId = props.speakerId ?? 1
     this.token = props.token
-    this.volume = props.volume ?? 0.5
   }
 
   async getQuery(text: string, speakerId = 1): Promise<string> {
@@ -72,51 +62,25 @@ export class TTS {
       throw new Error(`getQuery failed: ${error}`)
     })
     const url = new URL(streamUrl)
-    const { onPlayed, onDone } = this
 
-    return new Promise((resolve, reject) => {
-      this.audio = new AudioOut({ streams: 1, bitsPerSample: 16, sampleRate: this.sampleRate ?? 22050 })
-      this.audio.enqueue(0, AudioOut.Volume, Math.round((volume ?? this.volume) * 256))
-      const audio = this.audio
-      const streamer = new MP3Streamer({
-        http: device.network.https,
-        host: url.host,
-        path: url.pathname,
-        port: 443,
-        audio: {
-          out: audio,
-          stream: 0,
-        },
-        onPlayed(buffer) {
-          const power = calculatePower(buffer)
-          onPlayed?.(power)
-        },
-        onReady(state) {
-          trace(`Ready: ${state}\n`)
-          if (state) {
-            audio.start()
-          } else {
-            audio.stop()
-          }
-        },
-        onError: (e) => {
-          trace('ERROR: ', e, '\n')
-          this.streaming = false
-          streamer?.close()
-          this.audio?.close()
-          this.audio = undefined
-          reject(e)
-        },
-        onDone: () => {
-          trace('DONE\n')
-          this.streaming = false
-          streamer?.close()
-          this.audio?.close()
-          this.audio = undefined
-          onDone?.()
-          resolve()
-        },
-      })
-    })
+    return this.play(
+      (audio, hooks) =>
+        new MP3Streamer({
+          http: device.network.https,
+          host: url.host,
+          path: url.pathname,
+          port: 443,
+          audio: {
+            out: audio,
+            stream: 0,
+          },
+          onPlayed: hooks.onPlayed,
+          onReady: hooks.onReady,
+          onError: hooks.onError,
+          onDone: hooks.onDone,
+        }),
+      volume,
+      { bitsPerSample: 16, sampleRate: this.sampleRate ?? 22050 },
+    )
   }
 }
