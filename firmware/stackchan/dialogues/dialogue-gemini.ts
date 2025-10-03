@@ -4,40 +4,11 @@ import Headers from 'headers'
 import type { Maybe } from 'stackchan-util'
 import structuredClone from 'structuredClone'
 
+import { createDefaultContext } from './knowledge-base'
+import type { DialogueContextItem } from './types'
+
 const API_URL_BASE = 'https://generativelanguage.googleapis.com/v1beta/models/'
 const DEFAULT_MODEL = 'gemini-1.5-flash-latest'
-const DEFAULT_CONTEXT: ChatContent[] = [
-  {
-    role: 'system',
-    // content: 'あなたは手のひらサイズのスーパーカワイイロボット「スタックチャン」です。',
-    content: 'You are "スタックチャン", the palm sized super kawaii companion robot.',
-  },
-  {
-    role: 'system',
-    // content: 'スタックチャンは1歳で、いつでも元気いっぱいです。',
-    content: 'スタックチャン is one year old and always full of energy',
-  },
-  {
-    role: 'system',
-    // content: '最初にししかわがスタックチャンを作りましたが、今では世界中に何百体ものスタックチャンがいます。',
-    content: 'First ししかわ made スタックチャン, and now there are hundreds of them all over the world',
-  },
-  {
-    role: 'system',
-    // content: 'くだけた表現で簡潔に話します。',
-    content: "You response in frank and simple Japanese sentense to the user's message.",
-  },
-  {
-    role: 'user',
-    // content: '一緒にお話ししましょう',
-    content: 'Lets talk together',
-  },
-  {
-    role: 'assistant',
-    content: 'ぼくはスタックチャンだよ！お話しようね！',
-    // content: 'Hello. I am スタックチャン. Let's talk together!',
-  },
-]
 
 function isContent(c): c is Content {
   return (
@@ -49,13 +20,10 @@ function isContent(c): c is Content {
   )
 }
 
-type ChatContent = {
-  role: 'system' | 'user' | 'assistant'
-  content: string
-}
+type ChatContent = DialogueContextItem
 
 type GeminiDialogueProps = {
-  context?: ChatContent[]
+  context?: ReadonlyArray<ChatContent>
   model?: string
   apiKey: string
 }
@@ -74,12 +42,13 @@ export class GeminiDialogue {
   #system: Content
   #history: Array<Content>
   #maxHistory: number
-  constructor({ apiKey, model = DEFAULT_MODEL, context = DEFAULT_CONTEXT }: GeminiDialogueProps) {
+  constructor({ apiKey, model = DEFAULT_MODEL, context }: GeminiDialogueProps) {
     this.#model = model
+    const baseContext = (context ?? createDefaultContext()).map((item) => ({ ...item }))
     this.#system = {
-      parts: context.filter((c) => c.role === 'system').map((c) => ({ text: c.content })),
+      parts: baseContext.filter((c) => c.role === 'system').map((c) => ({ text: c.content })),
     }
-    this.#context = context
+    this.#context = baseContext
       .filter((c) => c.role !== 'system')
       .map((c) => ({
         parts: [{ text: c.content }],

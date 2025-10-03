@@ -4,40 +4,13 @@ import Headers from 'headers'
 import type { Maybe } from 'stackchan-util'
 import structuredClone from 'structuredClone'
 
+import { createDefaultContext } from './knowledge-base'
+import type { DialogueContextItem } from './types'
+
 const API_URL = 'https://api.anthropic.com/v1/messages'
 const DEFAULT_MODEL = 'claude-3-haiku-20240307'
-const DEFAULT_CONTEXT: ChatContent[] = [
-  {
-    role: 'system',
-    // content: 'あなたは手のひらサイズのスーパーカワイイロボット「スタックチャン」です。',
-    content: 'You are "スタックチャン", the palm sized super kawaii companion robot.',
-  },
-  {
-    role: 'system',
-    // content: 'スタックチャンは1歳で、いつでも元気いっぱいです。',
-    content: 'スタックチャン is one year old and always full of energy',
-  },
-  {
-    role: 'system',
-    // content: '最初にししかわがスタックチャンを作りましたが、今では世界中に何百体ものスタックチャンがいます。',
-    content: 'First ししかわ made スタックチャン, and now there are hundreds of them all over the world',
-  },
-  {
-    role: 'system',
-    // content: 'くだけた表現で簡潔に話します。',
-    content: "You response in frank and simple Japanese sentense to the user's message.",
-  },
-  {
-    role: 'user',
-    // content: '一緒にお話ししましょう',
-    content: 'Lets talk together',
-  },
-  {
-    role: 'assistant',
-    content: 'ぼくはスタックチャンだよ！お話しようね！',
-    // content: 'Hello. I am スタックチャン. Let's talk together!',
-  },
-]
+
+type ChatContent = DialogueContextItem
 
 function isChatContent(c): c is ChatContent {
   return (
@@ -48,13 +21,8 @@ function isChatContent(c): c is ChatContent {
   )
 }
 
-type ChatContent = {
-  role: 'system' | 'user' | 'assistant'
-  content: string
-}
-
 type ClaudeDialogueProps = {
-  context?: ChatContent[]
+  context?: ReadonlyArray<ChatContent>
   model?: string
   apiKey: string
 }
@@ -66,19 +34,20 @@ export class ClaudeDialogue {
   #system: string
   #history: Array<ChatContent>
   #maxHistory: number
-  constructor({ apiKey, model = DEFAULT_MODEL, context = DEFAULT_CONTEXT }: ClaudeDialogueProps) {
+  constructor({ apiKey, model = DEFAULT_MODEL, context }: ClaudeDialogueProps) {
     this.#apiKey = apiKey
     this.#model = model
-    this.#system = context
+    const baseContext = (context ?? createDefaultContext()).map((item) => ({ ...item }))
+    this.#system = baseContext
       .filter((c) => c.role === 'system')
       .map((c) => c.content)
       .join('\n')
-    this.#context = context.filter((c) => c.role !== 'system')
+    this.#context = baseContext.filter((c) => c.role !== 'system')
     // The first message of context must always use the user role.
     if (!this.#context.map((c) => c.role).includes('user')) {
       this.#context.unshift({
         role: 'user',
-        content: 'Lets talk together',
+        content: "Let's talk together!",
       })
     }
     this.#history = []
